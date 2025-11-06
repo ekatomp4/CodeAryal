@@ -1,0 +1,12 @@
+:root {
+    --background: #111111;
+    --text: #fff;
+    --font: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+    font-family: var(--font);
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text);
+}

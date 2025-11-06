@@ -19,48 +19,29 @@ export default class Ariapp {
     // tools
     static DIRNAME = process.cwd();
     DIRNAME = process.cwd();
-    
+
     path = path;
     fs = fs;
 
     static BUILD = (app) => {
         const __dirname = process.cwd();
-    
 
-        // setup page caching middleware
-        app.app.use((req, res, next) => {
-            res.send = function (body) {
-                console.log("Captured response body:", body); // do something with it
-                // Call the original send
-                return originalSend.call(this, body);
-            };
-            
-            next();
-        });
-    
-        // Iterate through all routes
         for (const route of app.routes) {
-            if(route.build) {
-                route.build(app);
-            }
+            if (route.build) route.build(app);
             route.init(app);
         }
     };
-    
+
 
 
     // constructor
-    constructor({ port, routes = [], include = [], build = {} } = {}) {
+    constructor({ port, routes = [], include = [], aliases = {}, globalFolder, globalMeta = [] } = {}) {
         if (typeof port !== "number") throw new Error("Port must be a number");
 
         this.app = express();
         this.app.use(express.json());
 
-        // build
-        this.build = {
-            
-        };
-        for(let key in build) this.build[key] = build[key];
+
 
         // serve static folders automatically
         for (let folder of include) {
@@ -70,6 +51,20 @@ export default class Ariapp {
         }
 
         // build
+
+        this.globalFolder = globalFolder;
+        this.globalMeta = globalMeta;
+        
+        this.aliases = {
+            "page": (req, res, filePath) => {
+                const dir = filePath.split("/").slice(0, -1).join("/");
+                // Convert backslashes to forward slashes (Windows compatibility) and add trailing slash
+                return dir.replace(/\\/g, "/");
+            },
+            "global": `${this.globalFolder}`,
+            "path": (req, res, filePath) => req.path,
+            ...aliases
+        };
         this.routes = routes;
         Ariapp.BUILD(this);
 
@@ -77,6 +72,7 @@ export default class Ariapp {
         // for (let route of routes) this.addRoute(route);
 
         // start server
+        // TODO check to see if port is already in use
         this.app.listen(port, () => {
             console.log(`Server running on port ${port}, http://localhost:${port}`);
         });
