@@ -18,23 +18,35 @@ export default class Ariapp {
 
     // tools
     static DIRNAME = process.cwd();
+    DIRNAME = process.cwd();
+    
+    path = path;
+    fs = fs;
 
-    static BUILD = (app)=>{
-        const fullPath = path.resolve(process.cwd(), app.build.dist);
-        console.log("Building to dist folder: " + fullPath);
+    static BUILD = (app) => {
+        const __dirname = process.cwd();
+    
 
-        // make dist folder
-        if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath);
-        
-
-        // go through routes and add to dist with added scripts
-
-        // init new dist routes
-
-
-
-        // run express, then build, make all routes go through dist
-    }
+        // setup page caching middleware
+        app.app.use((req, res, next) => {
+            res.send = function (body) {
+                console.log("Captured response body:", body); // do something with it
+                // Call the original send
+                return originalSend.call(this, body);
+            };
+            
+            next();
+        });
+    
+        // Iterate through all routes
+        for (const route of app.routes) {
+            if(route.build) {
+                route.build(app);
+            }
+            route.init(app);
+        }
+    };
+    
 
 
     // constructor
@@ -46,7 +58,7 @@ export default class Ariapp {
 
         // build
         this.build = {
-            dist: "dist"
+            
         };
         for(let key in build) this.build[key] = build[key];
 
@@ -58,10 +70,11 @@ export default class Ariapp {
         }
 
         // build
+        this.routes = routes;
         Ariapp.BUILD(this);
 
         // add routes
-        for (let route of routes) this.addRoute(route);
+        // for (let route of routes) this.addRoute(route);
 
         // start server
         this.app.listen(port, () => {

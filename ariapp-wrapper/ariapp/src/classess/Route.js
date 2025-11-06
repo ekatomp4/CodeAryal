@@ -1,3 +1,4 @@
+
 /**
  * Base class for all routes
  * @class Route
@@ -6,13 +7,14 @@
  * @property {function} handler - The handler for the route
  */
 export default class Route {
-    constructor({ path, method="get", handler=() => {} }) {
+    constructor({ path, method="get", handler=() => {}, type="basic" }) {
         if(typeof path !== "string") throw new Error("Path must be a string");
         if(method !== "get" && method !== "post") throw new Error("Method must be 'get' or 'post'");
         if(typeof handler !== "function") throw new Error("Handler must be a function");
         this.path = path;
         this.method = method;
         this.handler = handler;
+		this.type = type;
     }
 
     /**
@@ -21,9 +23,8 @@ export default class Route {
      */
     init(ariapp) {
         const app = ariapp.app;
-        app[this.method](`${ariapp.build.dist}/${this.path}`, this.handler);
+        app[this.method](`${this.path}`, this.handler);
     }
-    
 }
 
 /**
@@ -39,9 +40,19 @@ export class PageRoute extends Route {
         super({
             path: correctedPath,
             method: "get",
-            handler: (req, res) => res.sendFile(filePath)
+            handler: (req, res, ariapp) => res.sendFile(filePath),
+			type: "page"
         });
+
+		this.filePath = filePath;
+
     }
+
+	build(ariapp) {
+		const path = ariapp.path;
+		this.handler = (req, res) => res.sendFile(path.resolve(this.filePath));
+	}
+
 }
 
 /**
@@ -64,7 +75,8 @@ export class JsonRoute extends Route {
 				} catch (err) {
 					res.status(500).json({ error: err.message });
 				}
-			}
+			},
+			type: "json"
 		});
 	}
 }
@@ -85,7 +97,8 @@ export class ApiRoute extends Route {
 				const fn = handlers[req.method.toLowerCase()];
 				if (fn) return fn(req, res, next);
 				res.status(405).send("Method Not Allowed");
-			}
+			},
+			type: "api"
 		});
 	}
 }
@@ -106,7 +119,8 @@ export class DownloadRoute extends Route {
 			handler: (_, res) => {
 				const absPath = path.resolve(process.cwd(), filePath);
 				res.download(absPath, name || path.basename(absPath));
-			}
+			},
+			type: "download"
 		});
 	}
 }
@@ -122,7 +136,8 @@ export class MiddlewareRoute extends Route {
 		super({
 			path: "*",
 			method: "use",
-			handler
+			handler,
+			type: "middleware"
 		});
 	}
 }
@@ -156,7 +171,8 @@ export class ErrorRoute extends Route {
 					error: "Not Found",
 					message: `Route ${req.originalUrl} not found`
 				});
-			}
+			},
+			type: "error"
 		});
 	}
 }

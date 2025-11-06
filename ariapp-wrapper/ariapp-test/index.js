@@ -6,7 +6,7 @@ const ariapp = new Ariapp({
     routes: [
         new Ariapp.PageRoute({
             path: "/",
-            filePath: `${Ariapp.DIRNAME}/public/index.html`
+            filePath: `public/pages/index.html`
         })
     ]
 });
