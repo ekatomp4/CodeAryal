@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #1e1e1e;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        #status {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: #2b2b2b;
+            padding: 15px;
+            border-radius: 8px;
+            width: 40vw;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #444;
+            text-align: left;
+        }
+
+        th {
+            color: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Admin Panel</h1>
+
+    <div id="status">
+        <div class="panel">
+            <h3>Server Info</h3>
+            <table id="server-info">
+                <tbody>
+                    <tr>
+                        <th>Uptime</th>
+                        <td id="uptime">-</td>
+                    </tr>
+                    <tr>
+                        <th>Memory</th>
+                        <td id="memory">-</td>
+                    </tr>
+                    <tr>
+                        <th>CPU</th>
+                        <td id="cpu">-</td>
+                    </tr>
+                    <tr>
+                        <th>Load</th>
+                        <td id="load">-</td>
+                    </tr>
+                    <tr>
+                        <th>Connections</th>
+                        <td id="connections">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="panel">
+            <h3>Services</h3>
+            <table id="services-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Running</th>
+                        <th>Uptime</th>
+                        <th>Last Started</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+
+</html>
