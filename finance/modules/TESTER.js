@@ -14,13 +14,13 @@ class TESTER {
         });
 
         // send request for stock data, with session
-        await axios.get(`${this.URL}/stock/MSFT`, {
-            headers: {
-                "session": this.session
-            }
-        }).then((res) => {
-            console.log(JSON.stringify(res.data));
-        });
+        // await axios.get(`${this.URL}/stock/PAPER`, {
+        //     headers: {
+        //         "session": this.session
+        //     }
+        // }).then((res) => {
+        //     console.log(JSON.stringify(res.data));
+        // });
 
     }
 }

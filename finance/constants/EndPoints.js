@@ -1,7 +1,8 @@
 import SessionManager from "../modules/SessionManager.js";
 import axios from "axios";
 
-import DataSourceManager from "./DataSourceManager.js";
+import DataSourceManager from "./managers/DataSourceManager.js";
+import TradingAppManager from "./managers/TradingAppManager.js";
 
 class EndPoints {
     static list = {
@@ -26,7 +27,9 @@ class EndPoints {
                 const response = await DataSourceManager.getStockData({ symbol, interval, range });
                 return response;
             }
-        }
+        },
+
+
     }
 
     static init(app) {
