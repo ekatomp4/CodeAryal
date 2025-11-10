@@ -32,11 +32,15 @@ class TradingAppManager {
     static getAvailableApps() {
         return Object.keys(TradingAppManager.appList);
     }
+
+    static getCommands() {
+        return TradingAppManager.requiredFunctions;
+    }
 }
 
 
-const testTrader = TradingAppManager.openApp("paper");
-console.log(testTrader);
+// const testTrader = TradingAppManager.openApp("paper");
+// console.log(testTrader);
 // paper is both a stock data source and a trading app
 
 export default TradingAppManager;

@@ -69,6 +69,8 @@ web_modules/
 .env
 .env.*
 !.env.example
+**/.env
+finance/cred.env
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
