@@ -9,7 +9,7 @@ app.get('/', (req, res) => {
 
 });
 
-import EndPoints from './constants/EndPoints.js';
+import EndPoints from './backend/constants/EndPoints.js';
 EndPoints.init(app);
 
 app.listen(PORT, () => {
@@ -17,5 +17,5 @@ app.listen(PORT, () => {
 });
 
 
-import TESTER from './modules/TESTER.js';
+import TESTER from './backend/modules/TESTER.js';
 TESTER.test();

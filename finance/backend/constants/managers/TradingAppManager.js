@@ -2,6 +2,8 @@ import TradingApp from "../classes/TradingApp.js";
 import Paper from "../classes/paper/Paper.js";
 Paper.start();
 
+// TODO rotating client & server keys
+
 class TradingAppManager {
     static appList = {
         "paper" : new TradingApp({ 

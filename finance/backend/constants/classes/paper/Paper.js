@@ -16,7 +16,7 @@ class StockPoint {
 }
 
 class Paper {
-    static saveDir = path.join(__dirname, "constants/classes/paper");
+    static saveDir = path.join(__dirname, "backend/constants/classes/paper");
     static saveFilePath = path.join(Paper.saveDir, "data.json");
 
     // Core parameters

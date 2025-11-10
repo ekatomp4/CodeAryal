@@ -8,6 +8,7 @@ import TradingAppManager from "./managers/TradingAppManager.js";
 
 class EndPoints {
     static list = {
+        
         "getSession": {
             "method": "get",
             "path": "/getSession",
