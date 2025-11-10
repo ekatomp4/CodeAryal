@@ -20,7 +20,7 @@ class Paper {
     static saveFilePath = path.join(Paper.saveDir, "data.json");
 
     // Core parameters
-    static secondsPerStep = 5;          // seconds in one candle
+    static secondsPerStep = 3600;          // seconds in one candle
     static intervalDelay = 5000;        // ms between candles
     static volatility = 0.015;          // 1.5% movement per candle
     static subVolatility = 0.002;       // 0.2% per second internal move
@@ -83,6 +83,7 @@ class Paper {
      * Simulate one candle, built from per-second micro-movements
      */
     static simulateStep() {
+        const startTime = Date.now();
         const startPrice = this.currentPrice;
         const secondPrices = [startPrice];
         let tempPrice = startPrice;
@@ -150,7 +151,11 @@ class Paper {
 
         this.save();
 
-        console.log(`[PAPER] Candle: O:${candle.open} H:${candle.high} L:${candle.low} C:${candle.close} Vol:${candle.volume}`);
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+        const durationStr = `${(duration / 1000).toFixed(2)}s`;
+
+        console.log(`[PAPER] Candle: O:${candle.open} H:${candle.high} L:${candle.low} C:${candle.close} Vol:${candle.volume} (${durationStr})`);
     }
 
 
