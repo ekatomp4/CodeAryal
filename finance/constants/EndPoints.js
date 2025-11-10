@@ -68,10 +68,17 @@ class EndPoints {
                 const commandList = TradingAppManager.openApp(name, sessionCredentials[name]); // pass session if present
                 if (!commandList[command]) return res.status(404).json({ error: "Command not found" });
 
+                // TODO passable data to command
                 return commandList[command]();
 
             }
-        }
+        },
+
+        // EXTRA
+
+        // statistics
+        //     - get statistics related to stocks
+        //     - get statistics related to apps
 
 
     }
