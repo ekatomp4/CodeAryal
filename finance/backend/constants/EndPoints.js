@@ -8,14 +8,50 @@ import TradingAppManager from "./managers/TradingAppManager.js";
 
 class EndPoints {
     static list = {
+
+        "login": {
+            "method": "get",
+            "path": "/login",
+            "handler": (req, res) => {
+                const account = { name: req.query.name, password: req.query.password };
+                const IP = req.ip;
+        
+                if (!account.name || !account.password) {
+                    return {
+                        error: "Name and password required",
+                        status: 400
+                    }
+                }
+        
+                const sessionUUID = SessionManager.createSession( {
+                    name: account.name,
+                    password: account.password,
+                    IP: IP
+                });
+
+                if(!sessionUUID) {
+                    return {
+                        error: "Invalid credentials",
+                        status: 401
+                    }
+                }
+        
+                // Return value will be auto-JSONed by your framework
+                return { session: sessionUUID };
+            },
+            public: true
+        },
+        
         
         "getSession": {
             "method": "get",
-            "path": "/getSession",
+            "path": "/getSession/:sessionUUID",
             "handler": (req, res) => {
-                // dynamically create a sessio or update an existing one, thenr return it
-                const account = { name: req.query.name, password: req.query.password };
-                return SessionManager.createSession({ account }); // TODO auto replenish
+                const sessionUUID = req.params.sessionUUID;
+                // console.log(sessionUUID);
+                return {
+                    hasSession: SessionManager.checkSession(sessionUUID)
+                };
             },
             public: true
         },
@@ -49,9 +85,9 @@ class EndPoints {
             "handler": (req, res) => {
                 res.status(404).json({ error: `Command not specified, try /app/[name]/[command], available: ${TradingAppManager.getCommands().join(", ")}` });
             }
-        },
-        "appWithCommand": {
-            "method": "get",
+        }, 
+        "appWithCommand": { 
+            "method": "get", 
             "path": "/app/:name/:command",
             "handler": (req, res) => {
                 const { name, command } = req.params;
@@ -87,6 +123,9 @@ class EndPoints {
     static init(app) {
         // middleware to check session unless public endpoint
         function checkSession(req, res, next) {
+
+            if (!EndPoints.list[req.path]) return next(); // allow normal pages through
+
             const session = req.headers.session;
 
             // Convert object to array for find
@@ -113,9 +152,15 @@ class EndPoints {
         // endpoints
         for (const endpoint in EndPoints.list) {
             const route = EndPoints.list[endpoint];
-            app[route.method](route.path, async (req, res) => {
+            app[route.method](`/api${route.path}`, async (req, res) => {
                 try {
                     const returnData = await route.handler(req, res);
+
+                    if(returnData && returnData.error) {
+                        res.status(returnData.status || 500).json(returnData);
+                        return;
+                    }
+
                     res.json(returnData);
                 } catch (err) {
                     res.status(500).json();

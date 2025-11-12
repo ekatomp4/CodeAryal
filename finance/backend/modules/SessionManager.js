@@ -1,15 +1,34 @@
 import crypto from "node:crypto";
 
+const accounts = {
+    "ekato": {
+        name: "ekato",
+        password: crypto.createHash('sha256').update('password123').digest('hex'),
+        accountCredentials: {
+            "paper": {
+                username: "ekato_trader",
+                password: "securepassword"
+            }
+        }
+    }
+}
+
 const expirationInHours = 1;
 class Session {
-    constructor({ appAccountData, accountData  } = {}) {
+
+    constructor({ appAccountData, accountData, clientData = {} } = {}) {
         this.UUID = crypto.randomUUID();
         this.expiresAt = Date.now() + expirationInHours * 60 * 60 * 1000;
         this.createdAt = Date.now();
 
-        if(!accountData || !appAccountData) return;
+        if (!accountData || !appAccountData) return;
         this.accountData = accountData; // holds account data for this app
         this.appAccountData = appAccountData; // holds credentials for connected apps
+
+        this.clientData = {
+            IP: null,
+            ...clientData
+        }; // holds data about the client ( IP, user agent, etc )
         /*
         {
             "paper": {
@@ -24,26 +43,52 @@ class Session {
 class SessionManager {
     static sessions = {};
     static checkSessionTimeout = 10000; // 10 seconds
-    
+
+
+    static verifyLogin(name, password) {
+
+        const user = accounts[name];
+        if (!user) return null;
+
+        const hashed = crypto.createHash("sha256").update(password).digest("hex");
+        if (user.password !== hashed) return null;
+
+        return user; // valid user object
+    }
+
     /**
      * Creates a new session and returns its UUID
      * @param {object} account - The account data for the session
      * @returns {string} The UUID of the created session
      */
-    static createSession({ account }) {
-        // TODO add fetched account data from database from login credentials
-        const fetchedAccountCredentials = {
-            "paper": {
-                username: "test",
-                password: "test"
-            }
-        }; // placeholder
+    static createSession({ name, password, IP }) {
+        const user = SessionManager.verifyLogin(name, password);
+        if (!user) return null;
 
+        console.log("Creating session for user:", name, "from IP:", IP);
+    
+        // see if an active session exists for that user
+        for (const sessionUUID in SessionManager.sessions) {
+            const session = SessionManager.sessions[sessionUUID];
+            if (session.accountData.name === user.name) {
+                // if the IP matches, reuse and extend session
+                if (session.clientData.IP === IP) {
+                    SessionManager.updateSession(sessionUUID);
+                    return session.UUID;
+                } else {
+                    // optional: invalidate old session if IP changes
+                    delete SessionManager.sessions[sessionUUID];
+                }
+            }
+        }
+    
+        // create new session
         const session = new Session({
-            appAccountData: fetchedAccountCredentials, // holds credentials for connected apps
-            accountData: account // holds account data for this app
-        }); 
-        
+            appAccountData: user.accountCredentials,
+            accountData: { name: user.name },
+            clientData: { IP }
+        });
+    
         SessionManager.sessions[session.UUID] = session;
         return session.UUID;
     }
@@ -77,27 +122,34 @@ class SessionManager {
      */
     static getSession(sessionUUID) { // get roles attached / data
         return SessionManager.sessions[sessionUUID]?.appAccountData || null;
-    } 
+    }
+
+    /**
+     * Returns the account data for a session
+     * @param {string} sessionUUID - The UUID of the session
+     * @returns {object} The account data for the session   
+     */
+    static getAccountData(sessionUUID) { // get roles attached / data
+        return SessionManager.sessions[sessionUUID]?.accountData || null;
+    }
 
     /**
      * Updates the expiration time for a session
      * @param {string} sessionUUID - The UUID of the session to update
      */
-    static updateSesion() {
-        const sessionUUID = Object.keys(SessionManager.sessions)[0];
-        SessionManager.sessions[sessionUUID].expiresAt = Date.now() + expirationInHours * 60 * 60 * 1000;
+    static updateSession(sessionUUID) {
+        SessionManager.sessions[sessionUUID].expiresAt = Date.now() + 60 * 60 * 1000;
     } // extend expiration by 1 hour
 
     /**
      * Updates the expiration time for a session
      * @param {string} sessionUUID - The UUID of the session to update
      */
-    static renewSession() {
-        const sessionUUID = Object.keys(SessionManager.sessions)[0];
-        SessionManager.updateSesion(sessionUUID);
+    static renewSession(sessionUUID) {
+        SessionManager.sessions[sessionUUID].expiresAt = Date.now() + expirationInHours * 60 * 60 * 1000;
     } // extend expiration
 
-    
+
 
     static init() {
         setInterval(() => {

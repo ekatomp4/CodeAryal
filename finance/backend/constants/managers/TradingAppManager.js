@@ -1,6 +1,6 @@
 import TradingApp from "../classes/TradingApp.js";
 import Paper from "../classes/paper/Paper.js";
-Paper.start();
+// Paper.start();
 
 // TODO rotating client & server keys
 

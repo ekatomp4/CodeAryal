@@ -17,12 +17,12 @@ class TESTER {
 
 
     static async test() {
-        console.log(TESTER_CREDENTIALS);
+        // console.log(TESTER_CREDENTIALS);
         // get session ( goes in furture headers )
-        await axios.get(`${this.URL}/getSession?name=${TESTER_CREDENTIALS.username}&password=${TESTER_CREDENTIALS.password}`).then((res) => {
-            this.session = res.data;
-            console.log(this.session);
-        });
+        // await axios.get(`${this.URL}/getSession?name=${TESTER_CREDENTIALS.username}&password=${TESTER_CREDENTIALS.password}`).then((res) => {
+        //     this.session = res.data;
+        //     console.log(this.session);
+        // });
 
         // send request for stock data, with session
         // await axios.get(`${this.URL}/stock/PAPER`, {
@@ -34,15 +34,15 @@ class TESTER {
         // });
 
         // send request for app
-        await axios.get(`${this.URL}/app/paper/getBalance`, {
-            headers: {
-                "session": this.session
-            }
-        }).then((res) => {
-            console.log(JSON.stringify(res.data));
-        }).catch((err) => {
-            console.log(err);
-        });
+        // await axios.get(`${this.URL}/app/paper/getBalance`, {
+        //     headers: {
+        //         "session": this.session
+        //     }
+        // }).then((res) => {
+        //     console.log(JSON.stringify(res.data));
+        // }).catch((err) => {
+        //     console.log(err);
+        // });
 
     }
 }
