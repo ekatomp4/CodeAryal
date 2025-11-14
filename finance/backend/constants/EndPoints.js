@@ -61,11 +61,11 @@ class EndPoints {
             "path": "/stock/:symbol",
             "handler": async (req, res) => {
                 const symbol = req.params.symbol;
-                const interval = req.query.interval || "1d";
-                const range = req.query.range || "1mo";
-
+                const interval = req.query.interval || "1m";
+                const range = req.query.range || "1wk";
                 // Only return the data property from axios
                 const response = await DataSourceManager.getStockData({ symbol, interval, range });
+
                 return response;
             }
         },
@@ -163,8 +163,10 @@ class EndPoints {
 
                     res.json(returnData);
                 } catch (err) {
-                    res.status(500).json();
-                    console.error(err.stack);
+
+                    // ALL FALLBACK ERROS
+                    res.status(500).json({ error: err.stack || err.message });
+                    // console.error(err.stack);
                 }
             });
         }

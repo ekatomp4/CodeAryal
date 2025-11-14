@@ -21,12 +21,13 @@ class DataSource {
     }
 
 
-    constructor({ coreURL, getter, formatter, validRanges }) {
+    constructor({ coreURL, getter, formatter, validRanges, validIntervals }) {
         this.coreURL = coreURL;
         this.getter = getter;
         this.formatter = formatter || ((data) => data);
 
         this.validRanges = validRanges || [];
+        this.validIntervals = validIntervals || [];
 
 
         this.isActive = true;
@@ -50,7 +51,8 @@ class DataSource {
 
     async getStockData({ symbol, interval, range }) {
 
-        if (!this.validRanges.includes(range) && this.validRanges.length) throw new Error(`Invalid range: ${range}`);
+        if (this.validRanges && !this.validRanges.includes(range) && this.validRanges.length) throw new Error(`Invalid range: ${range}`);
+        if (this.validIntervals && !this.validIntervals.includes(interval) && this.validIntervals.length) throw new Error(`Invalid interval: ${interval}`);
 
         const response = await this.getter({
             symbol,

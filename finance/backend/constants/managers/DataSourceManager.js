@@ -8,21 +8,36 @@ function yahooFormatter(yahooData) {
     }
 
     const result = yahooData.chart.result[0];
-    const timestamps = result.timestamp;
+    const timestamps = result.timestamp || [].fill(0, 0, result.indicators.quote[0].length);
     const quote = result.indicators.quote[0];
 
-    const formatted = timestamps.map((ts, i) => ({
-        date: ts,
-        open: quote.open[i],
-        high: quote.high[i],
-        low: quote.low[i],
-        close: quote.close[i],
-        volume: quote.volume[i],
-        adjclose: quote.close[i]  // Yahoo does not always return adjclose separately; use close if not available
-    }));
+    const formatted = timestamps.map((ts, i) => {
+        const openVal = quote.open[i];
+        const highVal = quote.high[i];
+        const lowVal = quote.low[i];
+        const closeVal = quote.close[i];
+        const volumeVal = quote.volume[i];
+        const adjcloseVal = result.indicators.adjclose[0].adjclose[i] ? result.indicators.adjclose[0].adjclose[i] : closeVal;
+        
+        if (openVal === null || highVal === null || lowVal === null || closeVal === null || volumeVal === null || adjcloseVal === null) {
+            return null;
+        }
+        
+        return {
+            date: ts,
+            open: openVal,
+            high: highVal,
+            low: lowVal,
+            close: closeVal,
+            volume: volumeVal,
+            adjclose: adjcloseVal  // Yahoo does not always return adjclose separately; use close if not available
+        };
+    }).filter(tick => tick !== null);
 
     // Optional: reverse to have oldest first if needed
-    return formatted.reverse();
+    // return formatted.reverse();
+
+    return formatted;
 }
 
  
@@ -34,7 +49,8 @@ const DataSourceList = {
             return await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}`);
         },
         formatter: yahooFormatter,
-        validRanges: ["1mo","3mo","6mo","ytd","1y","2y","5y","10y","max"]
+        validRanges: ["1d", "1wk","1mo","3mo","6mo","ytd","1y","2y","5y","10y","max"],
+        validIntervals: ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "4h", "1d", "5d", "1wk", "1mo", "3mo"]
     }),
 }
 

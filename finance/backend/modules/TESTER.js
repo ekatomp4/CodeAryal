@@ -19,18 +19,21 @@ class TESTER {
     static async test() {
         // console.log(TESTER_CREDENTIALS);
         // get session ( goes in furture headers )
-        // await axios.get(`${this.URL}/getSession?name=${TESTER_CREDENTIALS.username}&password=${TESTER_CREDENTIALS.password}`).then((res) => {
-        //     this.session = res.data;
-        //     console.log(this.session);
-        // });
+        await axios.get(`${this.URL}/api/login?name=ekato&password=password123`).then((res) => {
+            this.session = res.data;
+            console.log(this.session);
+        });
 
-        // send request for stock data, with session
-        // await axios.get(`${this.URL}/stock/PAPER`, {
+        // // send request for stock data, with session
+        // await axios.get(`${this.URL}/api/stock/APPL`, {
         //     headers: {
         //         "session": this.session
         //     }
-        // }).then((res) => {
+        // })
+        // .then((res) => {
         //     console.log(JSON.stringify(res.data));
+        // }).catch((err) => {
+        //     console.log(err);
         // });
 
         // send request for app

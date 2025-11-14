@@ -6,7 +6,7 @@
     --border-radius: 8px;
 
     /* --primary: #c6ffc6; */
-    --primary: #ba5353;
+    --primary: #b96868;
     --secondary: #c7b8ea;
 
     --thickness: 2px;
@@ -23,17 +23,24 @@ body {
     background-color: var(--background);
     display: flex;
     height: 100vh;
-    min-height: 100vh;
-    width: 100vw;
+    overflow-y: hidden;
+    /* min-height: 100vh; */
+    /* width: 100vw;
+    max-width: 100vw; */
     margin: 0;
+    /* overflow-x: hidden;; */
 }
 main {
     display: block;
     width: 100%;
     height: 100%;
-    padding: 5% 0;
+    padding: 10vh 10vh;
     position: relative;
+    margin: 0;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
+
 main::before {
     content: "";
     display: block;
@@ -110,8 +117,8 @@ form {
     padding: 5% 5%;
     gap: 20px;
 
-    margin-left: 10%;
-    margin-right: 10%;
+    /* margin-left: 10%;
+    margin-right: 10%; */
 
     border: var(--thickness) solid var(--primary);
     border-radius: var(--border-radius);
@@ -126,6 +133,7 @@ form > * {
 
 .sidebar {
     width: 200px;
+    /* display:none; */
     height: 100%;
     border-right: var(--thickness) solid var(--primary);
     padding: 10px;

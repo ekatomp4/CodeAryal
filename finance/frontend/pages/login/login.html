@@ -34,11 +34,12 @@
                 sessionStorage.setItem("session", sessionUUID);
                 console.log("Logged in with session:", sessionUUID);
                 if(sessionUUID) {
-                    window.location.href = "/";
+                    window.routeTo("/");
                 }
             })
             .catch(error => console.error("Error:", error.message));
         }
+
     </script>
 
 </body>

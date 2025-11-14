@@ -3,7 +3,9 @@ const app = express();
 
 app.use(express.json());
 app.use('/frontend/all', express.static('frontend/all'));
+app.use('/frontend/libs', express.static('frontend/libs'));
 app.use('/frontend/pages', express.static('frontend/pages'));
+
 app.set('trust proxy', true);
 
 
@@ -48,6 +50,7 @@ const routes = {
 
 for (const route in routes) {
     app.get(route, (req, res) => {
+        const isByFetch = req.query.fetch !== undefined && req.query.fetch !== null && req.query.fetch === "true";
         const absolutePath = path.resolve(routes[route].path);
         const isPublic = routes[route].public || false;
 
@@ -60,16 +63,24 @@ for (const route in routes) {
             // Inject a blank script tag before </body>
             let modifiedHTML = html;
 
-            // if (!isPublic) {
+            if (!isByFetch) {
                 modifiedHTML = html.replace(
                     /<\/body>/i,
                     `<script defer>
+                        // window.cachedPages = {};
+                        window.getSession = () => sessionStorage.getItem("session");
+
+                        window.routeTo = async (route) => {
+                           window.location.href = route;
+                        };
+                                                
                         window.addEventListener('sessionValid', () => {
                             console.log("Session is valid");
                         });
 
                         function reroute() {
-                            ${isPublic ? '' : 'window.location.href = "/unauthorized";'}
+                            // ${isPublic ? '' : 'routeTo("/unauthorized");'}
+                            ${isPublic ? '' : 'routeTo("/login");'}
                         }
                         function checkSession() {
                             fetch("http://localhost:31198/api/getSession/" + session, {
@@ -100,7 +111,7 @@ for (const route in routes) {
     
                     </script>\n</body>`
                 );
-            // }
+            }
 
             modifiedHTML = modifiedHTML.replace(/<head>/i,
                 `<head>\n<link rel="stylesheet" href="@all/all.css">\n
@@ -110,7 +121,9 @@ for (const route in routes) {
                 "root": "http://localhost:31198",
                 "page": routes[route].path.replace(/\/$/, ''),
                 "folder": routes[route].path.substring(0, routes[route].path.lastIndexOf("/")).replace(/\/$/, ''),
-                "all": "frontend/all"
+                "all": "frontend/all",
+                "libs": "frontend/libs",
+                "pages": "frontend/pages"
             };
             
             const aliasPrefix = "@";
@@ -129,10 +142,14 @@ for (const route in routes) {
     });
 }
 
-app.use((req, res) => {
-    res.redirect("/");
-});
+// app.use((req, res) => {
+//     res.redirect("/");
+// });
 
+
+// app.get("/api", (req, res) => {
+//     res.send("API");
+// });
 
 /// Start server
 
