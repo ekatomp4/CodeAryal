@@ -28,16 +28,17 @@ body {
     /* width: 100vw;
     max-width: 100vw; */
     margin: 0;
-    /* overflow-x: hidden;; */
+    overflow-x: hidden;
 }
 main {
     display: block;
     width: 100%;
     height: 100%;
-    padding: 10vh 10vh;
+    padding: 5vh 5vh;
     position: relative;
     margin: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     box-sizing: border-box;
 }
 
@@ -111,10 +112,29 @@ input {
 input:focus {
    box-shadow: 0px 0px 40px var(--glow); 
 }
+select {
+    transition: all ease-out 0.3s;
+    background-color: var(--background);
+    color: var(--text);
+    border: var(--thickness) solid var(--primary);
+    border-radius: var(--border-radius);
+    padding: 10px 20px;
+    width: 100%;
+    font-size: 1em;
+    -webkit-appearance: none; /* For Webkit browsers like Chrome and Safari */
+    -moz-appearance: none;    /* For Firefox */
+    appearance: none;   
+    outline: none;
+}
+select:focus {
+   box-shadow: 0px 0px 40px var(--glow); 
+}
+
+
 
 form {
     display: block;
-    padding: 5% 5%;
+    padding: 3% 3%;
     gap: 20px;
 
     /* margin-left: 10%;
