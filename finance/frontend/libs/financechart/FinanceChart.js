@@ -180,12 +180,14 @@ class FinanceChart {
         // draw axis
 
         // Draw axes
+        ctx.setLineDash([5, 10]);
         ctx.strokeStyle = this.settings.color.text;
         ctx.beginPath();
         ctx.moveTo(this.padding.left, this.padding.top);
         ctx.lineTo(this.padding.left, height - this.padding.bottom);
         ctx.lineTo(width - this.padding.right, height - this.padding.bottom);
         ctx.stroke();
+        ctx.setLineDash([]);
 
         // Draw Y-axis ticks and labels
         ctx.fillStyle = this.settings.color.text;
