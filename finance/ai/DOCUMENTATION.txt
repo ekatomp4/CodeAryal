@@ -1,0 +1,20 @@
+Sequential Adaptive Trading Engine (SATE)
+
+1. Statistical Analysis
+
+2. Price Predictor Neural Network
+
+3. Noise Reduction Layer
+
+4. Decision Neural Network
+
+5. Sharpe ratio and risk management 
+
+6. Filtering Layer (decition w/ risk management)
+
+7. Execution / Slippage Layer
+
+
+(optional)
+
+8. Feedback / Learning Layer

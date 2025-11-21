@@ -88,7 +88,7 @@ class DataSourceManager {
         return Object.values(DataSourceList).find((ds) => ds.isActive);
     }
 
-    static getStockData({ symbol, interval, range }, step = 0) {
+    static async getStockData({ symbol, interval, range }, step = 0) {
         
         if(symbol === "PAPER") {
             return PAPERDATA.getStockData({ symbol, interval, range });
@@ -96,16 +96,36 @@ class DataSourceManager {
 
         let data;
         try {
-            data = DataSourceManager.getCurrentActive().getStockData({ symbol, interval, range });
+            data = await DataSourceManager.getCurrentActive().getStockData({ symbol, interval, range });
         } catch (error) {
             if(step >= Object.values(DataSourceList).length) {
                 throw new Error("All data sources failed");
             }
             // on error, pause current and try next active
             DataSourceManager.getCurrentActive().pause();
-            data = DataSourceManager.getStockData({ symbol, interval, range }, step + 1);
+            data = await DataSourceManager.getStockData({ symbol, interval, range }, step + 1);
         }
         return data;
+    }
+
+
+    static async getSolanaData(address) {
+        if(!address) return null;
+        const ids = [address];
+        const url = `https://lite-api.jup.ag/price/v3?ids=${ids.join(',')}`;
+      
+        try {
+          const res = await axios.get(url);
+          const data = res.data;
+
+          if(data[address]) {
+            return data[address];
+          }
+        } catch (err) {
+          console.error('Error fetching SOL price:', err.response?.data ?? err.message);
+        }
+      
+        return null;
     }
 }
 

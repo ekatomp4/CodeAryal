@@ -14,8 +14,15 @@
 
     <div>
       <form>
-        <label for="ticker-input">Ticker</label>
-        <input type="text" id="ticker-input" spellcheck="false" autocorrect="off" required value="USDC-USD">
+        <div class="flex">
+          <label for="ticker-input">Ticker</label>
+          <input type="text" id="ticker-input" spellcheck="false" autocorrect="off" required value="USDC-USD">
+          <label for="ticker-type">Type</label>
+          <select id="type-select" required>
+            <option value="solana">Crypto - Solana</option>
+            <option value="stock" selected>Nasdaq</option>
+          </select>
+        </div>
         <div class="flex">
           <label for="range-input">Range</label>
           <select id="range-input" required>
@@ -35,7 +42,7 @@
           <select id="interval-input" required>
             <option value="1m">1 minute</option>
             <option value="2m">2 minutes</option>
-            <option value="5m">5 minutes</option>
+            <option value="5m" selected>5 minutes</option>
             <option value="15m">15 minutes</option>
             <option value="30m">30 minutes</option>
             <option value="60m">1 hour</option>
@@ -49,7 +56,35 @@
             <option value="3mo">3 months</option>
           </select>
         </div>
-        <button id="submit-btn" type="button">Submit</button>
+        <div class="flex">
+          <div class="multiselect">
+            <div class="selectBox" id="indicator-box">
+              <span>Select Indicators</span>
+            </div>
+            <div class="checkboxes" id="indicator-checks">
+              <div class="box">
+                <span>EMA 20</span>
+                <input type="checkbox" value="ema20">
+                <input id="color-input-ema20" type="color">
+              </div>
+              <div class="box">
+                <span>EMA 50</span>
+                <input type="checkbox" value="ema50">
+                <input id="color-input-ema50" type="color">
+              </div>
+              <div class="box">
+                <span>EMA 100</span>
+                <input type="checkbox" value="ema100"></div>
+                <input id="color-input-ema100" type="color">
+              <div class="box">
+                <span>EMA 200</span>
+                <input type="checkbox" value="ema200"></div>
+                <input id="color-input-ema200" type="color">
+            </div>
+          </div>
+        
+          <button id="submit-btn" type="button">Submit</button>
+        </div>
       </form>
 
     </div>

@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import SOLANA from "../constants/classes/apps/SOLANA.js";
 
 const accounts = {
     "ekato": {
@@ -8,6 +9,10 @@ const accounts = {
             "paper": {
                 username: "ekato_trader",
                 password: "securepassword"
+            },
+            "solana": {
+                address: "GnBP8EpuVkLPACtUKs4jVVHko74EuHqS4QBayJvgzudc",
+                base58PrivateKey: 'privatekey'
             }
         }
     }
@@ -54,6 +59,12 @@ class SessionManager {
         if (user.password !== hashed) return null;
 
         return user; // valid user object
+    }
+
+    static checkAdminSession(sessionUUID) {
+        const session = SessionManager.findSession(sessionUUID);
+        if(!session) return false;
+        return session.accountData.name === "ekato";
     }
 
     /**
@@ -115,6 +126,10 @@ class SessionManager {
         return true;
     }
 
+    static findSession(sessionUUID) {
+        return SessionManager.sessions[sessionUUID];
+    }
+
     /**
      * Returns the account data for a session
      * @param {string} sessionUUID - The UUID of the session
@@ -129,9 +144,51 @@ class SessionManager {
      * @param {string} sessionUUID - The UUID of the session
      * @returns {object} The account data for the session   
      */
-    static getAccountData(sessionUUID) { // get roles attached / data
-        return SessionManager.sessions[sessionUUID]?.accountData || null;
+    static async getAccountData(sessionUUID) {
+        const session = SessionManager.sessions[sessionUUID];
+        if (!session) return {};
+    
+        // recursively remove any key containing "private"
+        const sanitize = (obj) => {
+            if (!obj || typeof obj !== "object") return obj;
+    
+            const clean = Array.isArray(obj) ? [] : {};
+    
+            for (const [key, value] of Object.entries(obj)) {
+                if (key.toLowerCase().includes("private")) continue; // remove it
+                if (key.toLowerCase().includes("password")) continue;
+    
+                clean[key] = typeof value === "object"
+                    ? sanitize(value)
+                    : value;
+            }
+    
+            return clean;
+        };
+    
+        // remove password from base account
+        const { password, ...baseAccount } = session.accountData || {};
+
+        const solanaHoldings =  session.appAccountData["solana"] ? await SOLANA.getBalance(session.appAccountData["solana"]) : null
+        if(solanaHoldings) {
+
+        }
+        
+        const result = {
+            baseAccount,
+            holdings: {
+                "solana": solanaHoldings
+            }
+        };
+    
+        const filteredAppData = sanitize(session.appAccountData || {});
+        if (Object.keys(filteredAppData).length > 0) {
+            result.accountCredentials = filteredAppData;
+        }
+    
+        return result;
     }
+    
 
     /**
      * Updates the expiration time for a session

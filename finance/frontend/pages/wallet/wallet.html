@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet</title>
+    <link rel="stylesheet" href="@folder/wallet.css" />
+</head>
+
+<body>
+
+    <main>
+
+        <div class="left-section">
+
+            <div class="section" id="base-account-section">
+                <!-- Base account info will appear here -->
+            </div>
+
+            <div class="section" id="credentials-section">
+                <!-- Credentials + holdings will appear here -->
+            </div>
+
+        </div>
+
+        <div class="section">
+            <!-- Standalone section remains empty -->
+        </div>
+
+    </main>
+
+    <script defer>
+        async function getAccountData() {
+            const session = window.getSession();
+            const response = await fetch("http://localhost:31198/api/getAccountData", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "session": session
+                }
+            });
+            const data = await response.json();
+            return data;
+        }
+
+        function makeCollapsible(headerText, items) {
+            const container = document.createElement('div');
+            const header = document.createElement('div');
+            header.textContent = headerText;
+            header.className = 'collapsible-header';
+            container.appendChild(header);
+
+            const content = document.createElement('div');
+            content.className = 'collapsible-content';
+            items.forEach(item => content.appendChild(item));
+            container.appendChild(content);
+            content.classList.toggle('collapsed');
+
+            header.addEventListener('click', () => {
+                content.classList.toggle('collapsed');
+            });
+
+            return container;
+        }
+
+        function renderBaseAccount(baseAccount) {
+            const section = document.getElementById('base-account-section');
+            for (const key in baseAccount) {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.textContent = `${key}: ${baseAccount[key]}`;
+                section.appendChild(div);
+            }
+        }
+
+        function renderCredentialsAndHoldings(accountCredentials, holdings) {
+            const section = document.getElementById('credentials-section');
+            section.innerHTML = '';
+
+            // Credentials
+            const credItems = [];
+            for (const app in accountCredentials) {
+                const appDiv = document.createElement('div');
+                appDiv.className = 'item';
+
+                const entries = accountCredentials[app];
+                let text = `${app}:<br>`;
+
+                for (const key in entries) {
+                    text += `   ${key}: ${entries[key]}\n`;
+                }
+
+                appDiv.innerHTML = text.trim();
+                credItems.push(appDiv);
+            }
+            const credsCollapsible = makeCollapsible('Credentials', credItems);
+            section.appendChild(credsCollapsible);
+
+            // Holdings
+            const holdingsItems = [];
+            for (const chain in holdings) {
+                const chainDiv = document.createElement('div');
+                chainDiv.className = 'item';
+                chainDiv.textContent = `${chain}:`;
+                for (const mint in holdings[chain]) {
+                    const token = holdings[chain][mint];
+                    const tokenDiv = document.createElement('div');
+                    tokenDiv.className = 'item';
+                    tokenDiv.textContent = `${mint} - Amount: ${token.uiAmount} (raw: ${token.amount})`;
+                    chainDiv.appendChild(tokenDiv);
+                }
+                holdingsItems.push(chainDiv);
+            }
+            const holdingsCollapsible = makeCollapsible('Holdings', holdingsItems);
+            section.appendChild(holdingsCollapsible);
+        }
+
+        async function loadUser() {
+            const userData = await getAccountData();
+            renderBaseAccount(userData.baseAccount || {});
+            renderCredentialsAndHoldings(userData.accountCredentials || {}, userData.holdings || {});
+        }
+
+        window.addEventListener('sessionValid', () => {
+            loadUser();
+        });
+    </script>
+
+
+</body>
+
+</html>

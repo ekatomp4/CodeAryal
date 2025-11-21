@@ -1,5 +1,6 @@
 import TradingApp from "../classes/TradingApp.js";
 import Paper from "../classes/paper/Paper.js";
+import SOLANA from "../classes/apps/SOLANA.js";
 // Paper.start();
 
 // TODO rotating client & server keys
@@ -9,6 +10,11 @@ class TradingAppManager {
         "paper" : new TradingApp({ 
             name: "paper",
             getFunctionList: Paper.getFunctionList.bind(Paper)
+        }),
+
+        "solana": new TradingApp({
+            name: "solana",
+            getFunctionList: SOLANA.getFunctionList.bind(SOLANA)
         })
     };
 
@@ -28,7 +34,9 @@ class TradingAppManager {
     static openApp(name, credentials = {}) {
         const app = TradingAppManager.appList[name];
         if (!app) throw new Error(`Trading app ${name} not found`);
-        return app.open(credentials);
+        const fnList = app.open(credentials);
+        console.log("FN LIST", fnList);
+        return fnList;
     }
 
     static getAvailableApps() {

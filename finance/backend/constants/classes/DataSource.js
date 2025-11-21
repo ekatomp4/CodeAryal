@@ -18,7 +18,7 @@ class DataSource {
             }
         }
         return true;
-    }
+    } // data goes from oldest to newest
 
 
     constructor({ coreURL, getter, formatter, validRanges, validIntervals }) {

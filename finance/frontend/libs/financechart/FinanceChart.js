@@ -1,11 +1,17 @@
 class FinanceChart {
-    constructor(container) {
+    constructor(container, settings = {
+        showMax: false,
+        offset: 0
+    }) {
         this.container = container;
         this.canvas = document.createElement("canvas");
         this.ctx = this.canvas.getContext("2d");
         this.container.appendChild(this.canvas);
 
-        window.addEventListener("resize", () => this.resize());
+        // window.addEventListener("resize", () => this.resize());
+
+        this.showMax = settings.showMax || false;
+        this.offset = settings.offset || 0;
 
         this.data = [];
         this.running = false;
@@ -16,6 +22,7 @@ class FinanceChart {
                 down: "#ff6666",
                 line: "#ffffff94",
                 text: "#ffffff",
+                prediction: "#196bbd94",
                 indicators: {
                     ema: "#d25f00d0",
                 }
@@ -33,9 +40,8 @@ class FinanceChart {
             right: 50
         };
 
-        this.activeIndicators = [
-            { name: "ema", period: 20 }
-        ];
+
+        this.activeIndicators = [];
 
         this.indicatorCalculators = {
             ema: (prices, period) => {
@@ -56,9 +62,21 @@ class FinanceChart {
         this.init();
     }
 
+    setIndicators(indicators) {
+        this.activeIndicators = indicators;
+        console.log(this.activeIndicators);
+        this.calculateIndicators();
+    }
+    setIndicatorColor(name, color) {
+        this.settings.color.indicators[name] = color;
+        this.calculateIndicators();
+    }
+
     resize() {
-        this.canvas.width = this.container.offsetWidth;
-        this.canvas.height = this.container.offsetHeight;
+        this.canvas.style.width = this.container.clientWidth + "px";
+        this.canvas.style.height = this.container.clientHeight + "px";
+        this.canvas.width = this.container.clientWidth | 0;
+        this.canvas.height = this.container.clientHeight | 0;
     }
 
     setData(data) {
@@ -73,11 +91,14 @@ class FinanceChart {
         this.calculatedIndicators = {};
 
         for (const ind of this.activeIndicators) {
+            const key = `${ind.name}_${ind.period}_${Math.round(Math.random() * 10000)}`;
+            ind._key = key;
+
             const fn = this.indicatorCalculators[ind.name];
             if (!fn) continue;
 
             const values = fn(closes, ind.period);
-            this.calculatedIndicators[ind.name] = values;
+            this.calculatedIndicators[key] = values;
         }
     }
 
@@ -85,7 +106,7 @@ class FinanceChart {
         const ctx = this.ctx;
 
         for (const ind of this.activeIndicators) {
-            const values = this.calculatedIndicators[ind.name];
+            const values = this.calculatedIndicators[ind._key];
             if (!values) continue;
 
             const color = this.settings.color.indicators[ind.name];
@@ -107,21 +128,17 @@ class FinanceChart {
         this.resize();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        const data = this.data;
+        const data = this.showMax ? this.data.slice(-this.showMax - this.offset) : this.data;
         if (!data || data.length === 0) {
             this.running = false;
             return;
-        };
+        }
 
         const ctx = this.ctx;
         const width = this.canvas.width;
         const height = this.canvas.height;
 
-        const paddingLeft = this.padding.left;
-        const paddingRight = this.padding.right;
-        const paddingTop = this.padding.top;
-        const paddingBottom = this.padding.bottom;
-
+        const { left: paddingLeft, right: paddingRight, top: paddingTop, bottom: paddingBottom } = this.padding;
         const chartWidth = width - paddingLeft - paddingRight;
         const chartHeight = height - paddingTop - paddingBottom;
 
@@ -133,59 +150,103 @@ class FinanceChart {
             maxPrice = Math.max(maxPrice, d.high);
         });
 
+        // Add padding to min/max so wicks are visible
+        const paddingPercent = 0.02; // 2%
+        const minPriceAdjusted = minPrice - (maxPrice - minPrice) * paddingPercent;
+        const maxPriceAdjusted = maxPrice + (maxPrice - minPrice) * paddingPercent;
+
         const scaleY = price =>
-            paddingTop + chartHeight - ((price - minPrice) / (maxPrice - minPrice)) * chartHeight;
+            paddingTop + chartHeight - ((price - minPriceAdjusted) / (maxPriceAdjusted - minPriceAdjusted)) * chartHeight;
 
-        const spacing = chartWidth / data.length;
+        // Spacing and candle width
+        const spacing = Math.max(chartWidth / data.length, 2); // at least 2px per candle
+        const candleWidth = Math.min(spacing * 0.6, 10); // max width 10px
         const scaleX = i => paddingLeft + i * spacing + spacing / 2;
-
-        const candleWidth = spacing * 0.6;
 
         this.calculateIndicators();
 
+        const predictionPath = new Path2D();
+        let firstPrediction = true;
+
+        let lastCloseX = 0;
+        let lastCloseY = 0;
+
         data.forEach((d, i) => {
             const x = scaleX(i);
+
+
+            if (d.prediction) {
+                const prediction = d.prediction;
+                const predX = scaleX(i);
+                const predY = scaleY(prediction.close); 
+                
+                if (firstPrediction) {
+                    firstPrediction = false;
+                    predictionPath.moveTo(lastCloseX, lastCloseY);
+                    // predictionPath.moveTo(predX, predY);
+                }
+            
+                predictionPath.lineTo(predX, predY);
+                lastCloseX = predX;
+                lastCloseY = predY;
+
+                if(d.isOnlyPrediction) {
+                    return;
+                }
+            }
 
             const yOpen = scaleY(d.open);
             const yClose = scaleY(d.close);
             const yHigh = scaleY(d.high);
             const yLow = scaleY(d.low);
 
-            const color = d.close >= d.open ? this.settings.color.up : this.settings.color.down;
-            ctx.strokeStyle = color;
-            ctx.fillStyle = color;
+            const up = d.close >= d.open;
 
+            // Draw wick
+            ctx.strokeStyle = up ? this.settings.color.up : this.settings.color.down;
+            ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(x, yHigh);
             ctx.lineTo(x, yLow);
             ctx.stroke();
 
-            const bodyHeight = Math.abs(yClose - yOpen);
-            ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight || 1);
+            // Draw body
+            ctx.fillStyle = up ? this.settings.color.up : this.settings.color.down;
+            const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1); // minimum 1px height
+            ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);
 
-            // draw line
+            // Draw connecting line if enabled
             if (this.settings.line.show && i > 0) {
                 const prevClose = scaleY(data[i - 1].close);
                 ctx.strokeStyle = this.settings.color.line;
                 ctx.lineWidth = this.settings.line.width;
                 ctx.beginPath();
                 ctx.moveTo(x - spacing, prevClose);
-                ctx.lineTo(x, yOpen);
+                ctx.lineTo(x, yClose);
                 ctx.stroke();
             }
+
+            lastCloseX = x - candleWidth / 2 + candleWidth;
+            lastCloseY = Math.min(yOpen, yClose) + bodyHeight
         });
 
-        this.drawIndicators(scaleY, scaleX);
+        // draw prediction
 
-        // draw axis
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = this.settings.color.prediction;
+        ctx.stroke(predictionPath);
+
+        // draw indicators
+
+        this.drawIndicators(scaleY, scaleX);
 
         // Draw axes
         ctx.setLineDash([5, 10]);
         ctx.strokeStyle = this.settings.color.text;
         ctx.beginPath();
-        ctx.moveTo(this.padding.left, this.padding.top);
-        ctx.lineTo(this.padding.left, height - this.padding.bottom);
-        ctx.lineTo(width - this.padding.right, height - this.padding.bottom);
+        ctx.moveTo(paddingLeft, paddingTop);
+        ctx.lineTo(paddingLeft, height - paddingBottom);
+        ctx.lineTo(width - paddingRight, height - paddingBottom);
         ctx.stroke();
         ctx.setLineDash([]);
 
@@ -193,20 +254,17 @@ class FinanceChart {
         ctx.fillStyle = this.settings.color.text;
         ctx.font = '12px Arial';
         ctx.textAlign = 'left';
-
         const numTicks = 5;
         for (let i = 0; i <= numTicks; i++) {
-            const price = minPrice + (i / numTicks) * (maxPrice - minPrice);
+            const price = minPriceAdjusted + (i / numTicks) * (maxPriceAdjusted - minPriceAdjusted);
             const y = scaleY(price);
 
-            // Tick line
             ctx.strokeStyle = this.settings.color.text;
             ctx.beginPath();
-            ctx.moveTo(this.padding.left - 5, y);
-            ctx.lineTo(this.padding.left, y);
+            ctx.moveTo(paddingLeft - 5, y);
+            ctx.lineTo(paddingLeft, y);
             ctx.stroke();
 
-            // Label, price
             ctx.fillText(price.toFixed(4), 5, y + 3);
         }
 
@@ -216,8 +274,6 @@ class FinanceChart {
         ctx.font = '12px Arial';
 
         const xLabelCount = Math.min(data.length, 6);
-
-        // Determine if all data is from the same day
         const firstDate = new Date(data[0].date * 1000);
         const sameDay = data.every(d => {
             const date = new Date(d.date * 1000);
@@ -233,26 +289,86 @@ class FinanceChart {
             const date = new Date(d.date * 1000);
 
             let labelStr;
-            if (sameDay) { // all data is from the same day, show time
+            if (sameDay) {
                 const hours24 = date.getHours();
                 const minutes = date.getMinutes().toString().padStart(2, '0');
                 const hours12 = hours24 % 12 || 12;
                 const period = hours24 >= 12 ? 'PM' : 'AM';
                 labelStr = `${hours12}:${minutes} ${period}`;
-            } else { // not all data is from the same day, show date
+            } else {
                 labelStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
             }
 
-            ctx.fillText(labelStr, x, height - this.padding.bottom + 18);
+            ctx.fillText(labelStr, x, height - paddingBottom + 18);
         }
-
     }
+
+    // frame() {
+    //     this.resize();
+    //     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    //     const data = this.showMax ? this.data.slice(-this.showMax) : this.data;
+    //     if (!data || data.length === 0) {
+    //         this.running = false;
+    //         return;
+    //     }
+
+    //     const ctx = this.ctx;
+    //     const width = this.canvas.width;
+    //     const height = this.canvas.height;
+
+
+    //     const minPrice = Math.min(...data.map(d => d.low));
+    //     const maxPrice = Math.max(...data.map(d => d.high));
+    //     this.minPrice = minPrice;
+    //     this.maxPrice = maxPrice;
+
+    //     const candleWidth = width / data.length;
+
+    //     const numTicks = data.length;
+    //     const scaleX = (x) => width / numTicks * x;
+    //     const scaleY = (y) => height - ((y - this.minPrice) / (this.maxPrice - this.minPrice)) * height;
+
+    //     // draw
+    //     for (let i = 0; i < data.length; i++) {
+    //         const d = data[i];
+    //         const x = scaleX(i);
+    //         const yOpen = scaleY(d.open);
+    //         const yClose = scaleY(d.close);
+    //         const yHigh = scaleY(d.high);
+    //         const yLow = scaleY(d.low);
+
+    //         const lastOpen = data[i - 1]?.open || d.open;
+    //         const lastClose = data[i - 1]?.close || d.close;
+
+    //         const isUp = d.close > d.open;
+    //         ctx.fillStyle = isUp ? this.settings.color.up : this.settings.color.down;
+    //         const y = Math.min(yOpen, yClose);
+    //         const h = Math.max(1, Math.abs(yClose - yOpen));
+    //         ctx.fillRect(x, y, candleWidth, h);
+
+    //         // wick
+            
+    //         ctx.strokeStyle = this.settings.color.text;
+    //         ctx.lineWidth = 1;
+    //         ctx.beginPath();
+    //         ctx.moveTo(x + candleWidth/2, yLow);
+    //         ctx.lineTo(x + candleWidth/2, yHigh);
+    //         ctx.stroke();
+
+
+    //     }
+
+    //     // dont worry about indicators yet
+    //     // this.drawIndicators(scaleY, scaleX);
+    // }
+
 
     init() {
         this.running = true;
         this.resize();
         const loop = () => {
-            if(this.running) {
+            if (this.running) {
                 this.frame();
             };
             requestAnimationFrame(loop);
