@@ -182,8 +182,8 @@ class FinanceChart {
                 
                 if (firstPrediction) {
                     firstPrediction = false;
-                    predictionPath.moveTo(lastCloseX, lastCloseY);
-                    // predictionPath.moveTo(predX, predY);
+                    // predictionPath.moveTo(lastCloseX, lastCloseY);
+                    predictionPath.moveTo(predX, predY);
                 }
             
                 predictionPath.lineTo(predX, predY);

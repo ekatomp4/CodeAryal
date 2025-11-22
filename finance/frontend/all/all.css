@@ -179,7 +179,24 @@ form > * {
     background-color: var(--background);
     box-shadow: 4px 0 30px var(--glow);
     overflow-x: hidden;
+
+    animation: slideIn 0.3s ease-out;
 }
+
+
+@keyframes slideIn {
+    0% {
+        margin-left: -100%;
+        width: 0px;
+    }
+    25% {
+        width: 200px;
+    }
+    100% {
+        margin-left: 0;
+    }
+}
+
 .sidebar-toggle {
     position: fixed;
     top: 20px;
@@ -200,12 +217,30 @@ form > * {
 
 .collapsed {
     transition: all ease-out 0.3s;
-    width: 0px;
-    min-width: 0px;
+    /* width: 0px; */
+    /* min-width: 0px; */
+    /* margin-left: -100% ! important; */
     /* transform: translateX(-100%); */
     padding: 0;
     border-right: 0; /* optional instant reset */
+
+    animation: slideOut 0.3s ease-out forwards;
 }
+
+@keyframes slideOut {
+    0% {
+        margin-left: 0;
+    }
+    75% {
+        margin-left: -100%;
+        width: 200px;
+    }
+    100% {
+        margin-left: -100%;
+        width: 0;
+    }
+}
+
 
 .sidebar > .header {
     display: flex;

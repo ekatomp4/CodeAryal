@@ -12,10 +12,10 @@ chart.setIndicators([
         name: "ema",
         period: 50,
     },
-    {
-        name: "ema",
-        period: 100,
-    },
+    // {
+    //     name: "ema",
+    //     period: 100,
+    // },
 ]);
 const errorContainer = document.getElementById("error");
 const shotsContainer = document.getElementById("shots");

@@ -17,4 +17,39 @@ Sequential Adaptive Trading Engine (SATE)
 
 (optional)
 
-8. Feedback / Learning Layer
+.Feedback / Learning Layer
+
+.averaging different networks predictions
+
+.network for volume
+
+.reenforced learning for decision making
+
+.auto corrections to preditions based on current trend 
+    |- Will stop offsets when trend matches pattern but not values
+
+
+(ISSUES)
+
+1. A lot of time when the market is very stable for a period,
+the model will aim very high or very low. We can solve this by
+checking for the first candle outside of the stable candle set,
+and check if it goes in the same direction as the prediction.
+
+[regime detection issue]
+
+2. Sometimes model is schizoprenic and makes a makes some random
+predictions, we can solve this by finding an indicator / model that 
+proves or disproves the model's predictions.
+We can also Normalize using global statistics, not per-window.
+
+Because the model gets closer to the real data as it moves forward, 
+we can take into account old predictions and average them for a more
+accurate prediction.
+
+A lot of times there will be a major change in price, then 
+it will accuretly model the data after the spike, just
+at a much higher/lower price. Can anchor prices to mean / median
+using a restoring force function or a distance-proportional pull function
+
+[model sanity issue]

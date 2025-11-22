@@ -57,17 +57,89 @@ class SSAPTM {
         */ 
 
 
+        function gaussianCenterPull(predictions, strength = 0.5) {
+            const n = predictions.length;
+            const mean = predictions.reduce((a, b) => a + b, 0) / n;
+        
+            // gaussian parameters
+            const center = (n - 1) / 2;
+            const sigma = n / 4; 
+        
+            const result = [];
+        
+            for (let i = 0; i < n; i++) {
+                const dist = i - center;
+        
+                // Gaussian weight: near the center = 1, edges = 0
+                const weight = Math.exp(-(dist * dist) / (2 * sigma * sigma));
+        
+                const pull = weight * strength;
+        
+                // Move prediction slightly toward Gaussian center (mean)
+                result[i] = predictions[i] * (1 - pull) + mean * pull;
+            }
+        
+            return result;
+        }
+        
+
         try {
 
             // PREDICT
 
             let predictions = await ai.predictNext(data, amount);
 
+            // REMOVE FIRST DEVIATION
+
+            const firstDeviation = predictions[0] - data[data.length - 1].close;
+            predictions = predictions.map((prediction) => prediction - firstDeviation);
+
             // APPLY SMOOTHING
 
-            const smoothingValue = volatilityToSmoothing(stats.volatility, 0.00005, 0.002, 0, 0.85);
-            // console.log(`Smoothing value: ${smoothingValue}`);
-            predictions = smoothSeries(predictions, smoothingValue);
+            const smoothingValue = volatilityToSmoothing(stats.volatility, 0.00005, 0.002, 0.1, 0.85);
+            predictions = smoothSeries(predictions, smoothingValue); // 0.65 for sample data
+
+            // APPLY GAUSSIAN RANDOM WALK PROBABILISTIC MODEL
+
+            // predictions = gaussianCenterPull(predictions, 0.1); // DO NOT USE
+            /*
+            WITH 0.1:
+            5: 7.09%
+            10: 7.99%
+            15: 12.00%
+            20: 14.01%
+            25: 18.08%
+            30: 20.64%
+            35: 21.72%
+            40: 23.37%
+            45: 20.83%
+            50: 21.52%
+            With 0.2: 
+            5: 7.13%
+            10: 7.93%
+            15: 11.92%
+            20: 13.68%
+            25: 17.55%
+            30: 19.98%
+            35: 21.09%
+            40: 22.87%
+            45: 20.53%
+            50: 21.35%
+            NONE: 
+            5: 7.07%
+            10: 8.11%
+            15: 12.18%
+            20: 14.44%
+            25: 18.75%
+            30: 21.32%
+            35: 22.38%
+            40: 23.87%
+            45: 21.12%
+            50: 21.70%
+            */
+
+
+
 
             return predictions;
         } catch (error) {
