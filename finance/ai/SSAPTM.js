@@ -5,8 +5,8 @@ import collectStatistics from "./nodes/collectStatistics.js";
 import AI from "./AI.js"
 
 const ai = new AI();
-ai.loadSave(); // Load model
-// ai.trainModel();
+// ai.loadSave(); // Load model
+ai.trainModel();
 
 
 function volatilityToSmoothing(vol, minVol = 0.00005, maxVol = 0.002, minSmooth = 0, maxSmooth = 0.7) {

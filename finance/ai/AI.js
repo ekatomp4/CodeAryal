@@ -4,6 +4,9 @@ import tf, { add } from '@tensorflow/tfjs-node';
 import crypto from "crypto";
 
 
+import smoothCandles from "./nodes/smoothCandles.js";
+
+
 const seed = "0";
 
 function rand(additionalSeed = "") {
@@ -11,6 +14,17 @@ function rand(additionalSeed = "") {
   const hash = crypto.createHash('sha256').update(seed + additionalSeed).digest('hex');
   const intVal = parseInt(hash.slice(0, 8), 16);
   return intVal / 0xffffffff; // normalize to [0, 1]
+}
+
+function appendTimeEncoding(slice) {
+  const n = slice.length;
+  
+  for(let i = 0; i < n; i++) {
+    slice[i]["time"] = i / (n - 1);
+  }
+  
+  return slice;
+  
 }
 
 
@@ -34,13 +48,27 @@ const trainingDataFolder = "./training-data/";
 const datasets = ["XBTUSD", "ETHUSD", "XRPUSD"];
 
 const TRAINING_PARAMS = {
-  data_range: 100,
-  slices_per_epoch: 10,
-  dropout_percent: 0,
+  data_range: 100,  // best 100
+  slices_per_epoch: 10, // best 10
+  dropout_percent: 0, // best 0
 
-  inputFeatures: ['open', 'high', 'low', 'close'],
-  inputWeights: [1, 1, 1, 1],
+  inputFeatures: ["open", "high", "low", 'close', 'time'], // best OHLC + time
+  inputWeights: [1, 1, 1, 1], // best all 1s
+
+  smoothing: 0.1, // best 0.1
+
+  layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"],
+    ["dense", 32, "relu"]
+  ]
+  // NOTE: 16 is too low to capture detail
 };
+// 'elu' | 'hardSigmoid' | 'linear' | 'relu' | 'relu6' | 'selu' | 'sigmoid' | 'softmax' | 'softplus' | 'softsign' | 'tanh' | 'swish' | 'mish' | 'gelu' | 'gelu_new';
+// 1 swish layer has hard downwards trend with occasional wobbly snaps to accurate pattern
+
 
 let loadedDataSets = {};
 async function loadDatasets() {
@@ -51,7 +79,8 @@ async function loadDatasets() {
     if (path.extname(file) !== '.json') continue;
     const filePath = path.join(trainingDataFolder, file);
     try {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      let data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+
       const datasetName = path.basename(file, '.json');
       loadedDataSets[datasetName] = data.map(c => ({ ...c, date: new Date(c.date) }));
       console.log(`Loaded ${data.length} candles from ${file}`);
@@ -126,8 +155,12 @@ class AI {
     for (let i = 0; i < epochs; i++) {
       for (let j = 0; j < TRAINING_PARAMS.slices_per_epoch; j++) {
         const symbol = symbols[Math.floor(rand(seed + i + j) * symbols.length)];
-        // const candles = loadedDataSets[symbol];
-        const candles = appendExtraData(loadedDataSets[symbol]);
+        let candles = loadedDataSets[symbol];
+
+        // manipulate data
+        candles = smoothCandles(candles, TRAINING_PARAMS.smoothing);
+        candles = appendTimeEncoding(candles);
+        // const candles = appendExtraData(loadedDataSets[symbol]);
 
         if (!candles || candles.length <= dataRange) continue;
 
@@ -159,16 +192,18 @@ class AI {
     // input
     model.add(tf.layers.dense({ units: 256, inputShape: [inputSize], activation: 'relu' }));
 
-    // simplifying & expansion
-    model.add(tf.layers.dense({ units: 128, activation: 'relu' }));
-    model.add(tf.layers.dense({ units: 256, activation: 'relu' }));
+    
+    // hidden    
 
     if (TRAINING_PARAMS.dropout_percent > 0) {
       model.add(tf.layers.dropout({ rate: TRAINING_PARAMS.dropout_percent }));
     } 
 
-    model.add(tf.layers.dense({ units: 128, activation: 'relu' }));
-    model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
+
+    for(let i = 0; i < TRAINING_PARAMS.layerDesign.length; i++) {
+      const layer = TRAINING_PARAMS.layerDesign[i];
+      model.add(tf.layers[layer[0]]({ units: layer[1], activation: layer[2] }));
+    }
 
     // output
 
@@ -196,7 +231,8 @@ class AI {
 
     // normalize the input slice for prediction
     let slice = data.slice(-TRAINING_PARAMS.data_range);
-    slice = appendExtraData(slice);
+    // slice = appendExtraData(slice);
+    slice = appendTimeEncoding(slice);
     const normalizedSlice = normalizeSlice(slice);
     // const inputFlat = normalizedSlice.flatMap(c => [c.open, c.high, c.low, c.close]);
     const featuresArray = TRAINING_PARAMS.inputFeatures.map(feature => normalizedSlice.map(c => c[feature]));

@@ -19,7 +19,7 @@ chart.setIndicators([
 ]);
 const errorContainer = document.getElementById("error");
 const shotsContainer = document.getElementById("shots");
-
+const predictionAccuracyContainer = document.getElementById("prediction-accuracy");
 
 let paused = false;
 let step = 0;
@@ -32,7 +32,8 @@ const stats = {
     miss: {}, // will store { totalError, count } per prediction index
     coveredCandles: 0,
     undershot: 0,
-    overshot: 0
+    overshot: 0,
+    correctDirection: 0
 };
 
 const allDataResponse = await fetch("http://localhost:31198/api/sample?givenext=20&startindex=0");
@@ -96,6 +97,26 @@ async function stepChart() {
         const errorPercent = Math.abs(predictedClose - actualClose) / actualClose * 100;
         stats.miss[i].totalError += errorPercent;
         stats.miss[i].count += 1;
+
+
+        // Track direction accuracy
+
+        // if(i>20) continue; // cap at 20
+
+        const prevActual = i === 0
+            ? showData[showData.length - 1].close  // last known real candle
+            : Number(nextData[i - 1].close);       // previous future candle
+
+        const actualUp = actualClose > prevActual;
+        const actualDown = actualClose < prevActual;
+
+        const predictedUp = predictedClose > prevActual;
+        const predictedDown = predictedClose < prevActual;
+
+        if ((actualUp && predictedUp) || (actualDown && predictedDown)) {
+            stats.correctDirection++;
+        }
+
     }
 
     stats.coveredCandles += prediction.length;
@@ -122,6 +143,11 @@ async function stepChart() {
         shotsContainer.innerHTML = `
         Undershot candles: ${stats.undershot}<br>
         Overshot candles: ${stats.overshot}<br>`;
+
+        // Prediction accuracy: ${stats.correctDirection / stats.coveredCandles * 100}%<br>
+        predictionAccuracyContainer.innerHTML = `
+        Prediction accuracy: ${Math.round(stats.correctDirection / stats.coveredCandles * 100)}%<br>
+        `;
     }
 
     step++;

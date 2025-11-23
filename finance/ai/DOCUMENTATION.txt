@@ -53,3 +53,136 @@ at a much higher/lower price. Can anchor prices to mean / median
 using a restoring force function or a distance-proportional pull function
 
 [model sanity issue]
+
+3. Add time encoding so the bot understands the Sequential nature
+
+[time encoding issue]
+
+
+TESTS:
+-Accuracy = up/down percent of correct predictions
+-Deviation = % off from the actual value
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+]
+smoothing: 0, dropout: 0
+27% accuracy 9-24% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+]
+smoothing: 0.1, dropout: 0
+29% accuracy 8-15% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+]
+smoothing: 0.1, dropout: 0.03
+29% accuracy 7-14% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+] + timestamps
+smoothing: 0.1, dropout: 0.03
+31% accuracy 7-13% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+] + timestamps - open - high - low
+smoothing: 0.1, dropout: 0
+33% accuracy 10-23% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+] + timestamps - high - low
+smoothing: 0.1, dropout: 0
+27% accuracy 12-35% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"],
+    ["dense", 32, "relu"]
+] + timestamps
+smoothing: 0.1, dropout: 0
+27% accuracy 6-8% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"],
+    ["dense", 32, "relu"],
+    ["dense", 16, "relu"]
+] + timestamps
+smoothing: 0.1, dropout: 0
+28% accuracy 7-11% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+] + timestamps
+smoothing: 0.1, dropout: 0.1
+28% accuracy 5-7% deviation
+(DOES NOT CAPTURE TREND, ALMOST COMPLETELY STRAIGHT)
+
+
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+]
+smoothing: 0.3, dropout: 0
+30% accuracy 8-17% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+]
+smoothing: 0.4, dropout: 0
+30% accuracy 13-31% deviation
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+]
+smoothing: 0.5, dropout: 0
+28% accuracy 11-27% deviation
+
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"]
+]
+smoothing: 0.9, dropout: 0
+27% accuracy 12-29% deviation
