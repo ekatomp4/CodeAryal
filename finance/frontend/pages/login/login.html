@@ -33,6 +33,12 @@
                 const sessionUUID = data.session;
                 sessionStorage.setItem("session", sessionUUID);
                 console.log("Logged in with session:", sessionUUID);
+
+                localStorage.setItem("savedCreds", JSON.stringify({
+                    name: document.getElementById("name").value,
+                    password: document.getElementById("password").value
+                }));
+
                 if(sessionUUID) {
                     window.routeTo("/");
                 }

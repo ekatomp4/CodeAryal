@@ -139,6 +139,38 @@ smoothing: 0.1, dropout: 0
 28% accuracy 7-11% deviation
 
 layerDesign: [
+["dense", 512, "relu"],
+["dense", 256, "relu"],
+["dense", 128, "relu"],
+["dense", 64, "relu"],
+["dense", 32, "relu"]
+] + timestamps
+smoothing: 0.1, dropout: 0
+32% accuracy 7-15% deviation
+(very wobbly and wavy)
+
+layerDesign: [
+    ["dense", 128, "relu"],
+    ["dense", 256, "relu"],
+    ["dense", 128, "relu"],
+    ["dense", 64, "relu"],
+] + timestamps + 20 slices per epoch + 200 range
+smoothing: 0.1, dropout: 0
+31% accuracy 7-14% deviation
+
+layerDesign: [
+["dense", 512, "relu"],
+["dense", 512, "relu"],
+["dense", 256, "relu"],
+["dense", 128, "relu"],
+["dense", 64, "relu"],
+["dense", 64, "relu"]
+] + timestamps + 100 extra range
+smoothing: 0.1, dropout: 0
+29% accuracy 5-8% deviation
+(a little too smooth to model patterns accurately)
+
+layerDesign: [
     ["dense", 128, "relu"],
     ["dense", 256, "relu"],
     ["dense", 128, "relu"],
@@ -186,3 +218,18 @@ layerDesign: [
 ]
 smoothing: 0.9, dropout: 0
 27% accuracy 12-29% deviation
+
+PRODUCTIONS AND FULL TESTS
+
+EKAT 1.0
+layerDesign: [
+    ["dense", 512, "gelu"], // best 128
+    ["dense", 256, "gelu"], // pattern recog start
+    ["dense", 128, "gelu"], // best 128
+    ["dense", 64, "gelu"], // best 64
+]
+inputFeatures: ["open", "high", "low", 'close', 'time', "volume", "rsi", "returnPct", "movement"]
+inputWeights: {
+    "movement": 0.5
+},
+33-43% accuracy 9-12% deviation

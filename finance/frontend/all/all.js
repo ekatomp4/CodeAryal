@@ -75,3 +75,51 @@ window.addEventListener('sessionValid', () => {
     ];
     linkList.forEach(link => addSidebarButton(link.name, link.path, link.onclick));
 });
+
+
+const User = {
+    keys: {}
+}
+
+window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        sidebarElement.querySelector(".sidebar-toggle").click();
+    }
+    User.keys[e.key] = true;
+});
+window.addEventListener("keyup", (e) => {
+    User.keys[e.key] = false;
+});
+
+const keystrokes = {
+    "quickLogin": {
+        keys: ["q", "l"],
+        fn: ()=>{
+            const savedUser = JSON.parse(localStorage.getItem("savedCreds"));
+            if(!savedUser.name || !savedUser.password) return;
+            fetch("http://localhost:31198/api/login?name=" + savedUser.name + "&password=" + savedUser.password, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }).then(response => response.json())
+            .then(data => {
+                const sessionUUID = data.session;
+                sessionStorage.setItem("session", sessionUUID);
+                console.log("Logged in with session:", sessionUUID);
+
+                if(sessionUUID) {
+                    window.routeTo("/");
+                }
+            })
+            .catch(error => console.error("Error:", error.message));
+        }
+    }
+}
+setInterval(() => {
+    for (const keystroke in keystrokes) {
+        if (keystrokes[keystroke].keys.every(key => User.keys[key])) {
+            keystrokes[keystroke].fn();
+        }
+    }
+}, 100);

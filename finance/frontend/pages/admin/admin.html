@@ -14,6 +14,20 @@
             display: flex;
             justify-content: space-between;
         }
+        #definitions {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        #definitions > p {
+            box-sizing: border-box;
+            /* padding: 0% 10px; */
+            opacity: 0.8;
+        }
+        #definitions > p > b {
+            padding-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -23,8 +37,15 @@
         <div id="chart-container"></div>
         <div id="stats-container">
             <p id="error"></p>
-            <p id="shots"></p>
+            <p id="signed-error"></p>
+            <p id="relAccuracy"></p>
             <p id="prediction-accuracy"></p>
+        </div>
+        <div id="definitions">
+            <p><b>Error:</b> <i>Magnitude of error, up or down</i></p>
+            <p><b>Signed Error:</b> <i>Average bias of predictions, 0 = best</i></p>
+            <p><b>Relative Accuracy:</b> <i>How close predicted values are</i></p>
+            <p><b>Directional Accuracy:</b> <i>How often predicted direction is correct</i></p>
         </div>
 
     </main>

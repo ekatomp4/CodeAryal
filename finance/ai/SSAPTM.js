@@ -5,8 +5,8 @@ import collectStatistics from "./nodes/collectStatistics.js";
 import AI from "./AI.js"
 
 const ai = new AI();
-// ai.loadSave(); // Load model
-ai.trainModel();
+ai.loadSave(); // Load model
+// ai.trainModel();
 
 
 function volatilityToSmoothing(vol, minVol = 0.00005, maxVol = 0.002, minSmooth = 0, maxSmooth = 0.7) {
@@ -96,7 +96,7 @@ class SSAPTM {
 
             // APPLY SMOOTHING
 
-            const smoothingValue = volatilityToSmoothing(stats.volatility, 0.00005, 0.002, 0.1, 0.85);
+            const smoothingValue = volatilityToSmoothing(stats.volatility, 0.00005, 0.002, 0.05, 0.3);
             predictions = smoothSeries(predictions, smoothingValue); // 0.65 for sample data
 
             // APPLY GAUSSIAN RANDOM WALK PROBABILISTIC MODEL

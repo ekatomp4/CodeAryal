@@ -1,10 +1,14 @@
 import fs from "fs";
 import path from "path";
-import tf, { add } from '@tensorflow/tfjs-node';
+import tf, { add, data } from '@tensorflow/tfjs-node';
 import crypto from "crypto";
+import datasetStats from "./nodes/datasetStats.js";
 
 
 import smoothCandles from "./nodes/smoothCandles.js";
+import formatCandles from "./nodes/formatCandles.js";
+import TRAINING_PARAMS from "./nodes/TRAINING_PARAMS.js";
+import appendExtraData from "./nodes/appendExtraData.js";
 
 
 const seed = "0";
@@ -16,61 +20,36 @@ function rand(additionalSeed = "") {
   return intVal / 0xffffffff; // normalize to [0, 1]
 }
 
-function appendTimeEncoding(slice) {
-  const n = slice.length;
-  
-  for(let i = 0; i < n; i++) {
-    slice[i]["time"] = i / (n - 1);
-  }
-  
-  return slice;
-  
-}
 
 
-function appendExtraData(dataset) {
-  const period = 50;
-  let multiplier = 2 / (period + 1);
-  let emaPrev = dataset[0].close; // start EMA with first close
-
-  for (let i = 0; i < dataset.length; i++) {
-    const close = dataset[i].close;
-    const ema = (close - emaPrev) * multiplier + emaPrev;
-    dataset[i].ema50 = ema;
-    emaPrev = ema;
-  }
-
-  return dataset;
-}
-
+const OHLC = ["open", "high", "low", "close"];
 const modelSavePath = './ai/model/';
 const trainingDataFolder = "./training-data/";
 const datasets = ["XBTUSD", "ETHUSD", "XRPUSD"];
 
-const TRAINING_PARAMS = {
-  data_range: 100,  // best 100
-  slices_per_epoch: 10, // best 10
-  dropout_percent: 0, // best 0
 
-  inputFeatures: ["open", "high", "low", 'close', 'time'], // best OHLC + time
-  inputWeights: [1, 1, 1, 1], // best all 1s
 
-  smoothing: 0.1, // best 0.1
+function countNeurons(layerDesign, featureCount, outputCount) {
+  let total = 0;
 
-  layerDesign: [
-    ["dense", 128, "relu"],
-    ["dense", 256, "relu"],
-    ["dense", 128, "relu"],
-    ["dense", 64, "relu"],
-    ["dense", 32, "relu"]
-  ]
-  // NOTE: 16 is too low to capture detail
-};
-// 'elu' | 'hardSigmoid' | 'linear' | 'relu' | 'relu6' | 'selu' | 'sigmoid' | 'softmax' | 'softplus' | 'softsign' | 'tanh' | 'swish' | 'mish' | 'gelu' | 'gelu_new';
-// 1 swish layer has hard downwards trend with occasional wobbly snaps to accurate pattern
+  // input layer neurons
+  total += featureCount;
 
+  // hidden layers
+  for (const layer of layerDesign) {
+    const units = layer[1];
+    total += units;
+  }
+
+  // output layer neurons
+  total += outputCount;
+
+  return total;
+}
+console.log("Neurons:", countNeurons(TRAINING_PARAMS.layerDesign, 5, 1));
 
 let loadedDataSets = {};
+let loadedDataSetsStats = {};
 async function loadDatasets() {
   if (Object.keys(loadedDataSets).length > 0) return loadedDataSets;
   const files = fs.readdirSync(trainingDataFolder);
@@ -88,34 +67,75 @@ async function loadDatasets() {
       console.error(`Error loading ${file}:`, err);
     }
   }
+
+  for (const datasetName in loadedDataSets) {
+    const data = loadedDataSets[datasetName];
+    loadedDataSetsStats[datasetName] = new datasetStats(data);
+  }
+
   return loadedDataSets;
 }
 
 
-function normalize(data) {
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  return data.map(x => (x - min) / (max - min));
-}
-// function normalize(data) {
-//   const mean = data.reduce((a,b) => a+b, 0) / data.length;
-//   const std = Math.sqrt(data.reduce((a,b) => a + (b-mean)**2, 0) / data.length);
-//   return data.map(x => std === 0 ? 0 : (x - mean)/std);
-// }
 function normalizeSlice(slice) {
   const result = [];
+  const averagePrice = slice.reduce((a, b) => a + b.close, 0) / slice.length;
+  const maxPrice = Math.max(...slice.map(c => c.high));
+  const minPrice = Math.min(...slice.map(c => c.low));
 
-  // For each feature, normalize across the slice
   const normalizedFeatures = {};
+
+  // sanitize, scan for null or undefined, make sure all are numbers
+  // sanitize, scan for null or undefined, make sure all are numbers
+  for (const feature in normalizedFeatures) {
+    normalizedFeatures[feature] = normalizedFeatures[feature].map((v, i) => {
+      if (typeof v !== 'number' || v === null || v === undefined) {
+        throw new Error(`Invalid value at index ${i} for key ${feature}: ${v}`);
+      }
+      return v;
+    });
+  }
+
+  // ohlc
+  for (const feature of OHLC) {
+    const values = slice.map(c => c[feature] ?? 0); // fallback to 0 if missing
+    const min = minPrice;
+    const max = maxPrice;
+    // normalize and apply weight
+    const normalizedValues = values.map(v => (max === min ? 0 : (v - min) / (max - min)));
+    normalizedFeatures[feature] = normalizedValues;
+  }
+
+  // volume
+  const maxVol = 2.1e9; // 2.1billion = max ever recorded
+  const minVol = 0;
+  const values = slice.map(c => c.volume ?? 0); // fallback to 0 if missing
+  const normalizedValues = values.map(v => (maxVol === minVol ? 0 : (v - minVol) / (maxVol - minVol)));
+  normalizedFeatures['volume'] = normalizedValues;
+
+
+  // auto
   for (let i = 0; i < TRAINING_PARAMS.inputFeatures.length; i++) {
     const feature = TRAINING_PARAMS.inputFeatures[i];
-    const weight = TRAINING_PARAMS.inputWeights[i] ?? 1; // default to 1
+    if (feature === 'volume') continue;
+    if (TRAINING_PARAMS.inputIgnoreNormalization.includes(feature)) {
+      normalizedFeatures[feature] = slice.map(c => c[feature]);
+      continue;
+    };
+    if (OHLC.includes(feature)) continue;
     const values = slice.map(c => c[feature] ?? 0); // fallback to 0 if missing
     const min = Math.min(...values);
     const max = Math.max(...values);
     // normalize and apply weight
-    const normalizedValues = values.map(v => (max === min ? 0 : (v - min) / (max - min)) * weight);
+    const normalizedValues = values.map(v => (max === min ? 0 : (v - min) / (max - min)));
     normalizedFeatures[feature] = normalizedValues;
+  }
+
+  // apply weights
+  for (const feature of Object.keys(normalizedFeatures)) {
+    const weight = TRAINING_PARAMS.inputWeights[feature] ?? 1;
+    if(weight === 1) continue;
+    normalizedFeatures[feature] = normalizedFeatures[feature].map(v => v * weight);
   }
 
   // Rebuild each candle with normalized & weighted features
@@ -144,7 +164,7 @@ class AI {
     return model;
   }
 
-  async trainModel({ epochs = 100 } = {}) {
+  async trainModel({ epochs = TRAINING_PARAMS.epochs } = {}) {
     await loadDatasets();
     const dataRange = TRAINING_PARAMS.data_range;
 
@@ -159,8 +179,7 @@ class AI {
 
         // manipulate data
         candles = smoothCandles(candles, TRAINING_PARAMS.smoothing);
-        candles = appendTimeEncoding(candles);
-        // const candles = appendExtraData(loadedDataSets[symbol]);
+        candles = appendExtraData(candles);
 
         if (!candles || candles.length <= dataRange) continue;
 
@@ -168,15 +187,19 @@ class AI {
         const slice = candles.slice(startIdx, startIdx + dataRange);
 
         // normalize the slice for training
+        // const normalizedSlice = normalizeSlice(slice);
+        // const featuresArray = TRAINING_PARAMS.inputFeatures.map(feature => normalizedSlice.map(c => c[feature]));
+        // const inputFlat = featuresArray.flat();
+        // X_list.push(inputFlat);
         const normalizedSlice = normalizeSlice(slice);
-        const featuresArray = TRAINING_PARAMS.inputFeatures.map(feature => normalizedSlice.map(c => c[feature]));
-        const inputFlat = featuresArray.flat();
+        const inputFlat = formatCandles(normalizedSlice);
         X_list.push(inputFlat);
 
         // use relative change for y
         const nextClose = candles[startIdx + dataRange].close;
         const lastClose = slice[slice.length - 1].close;
-        const normalizedNext = (nextClose - lastClose) / lastClose;
+        const normalizedNext = (nextClose - lastClose) / lastClose; // relative change
+        // console.log("NORMALIZED NEXT:", normalizedNext);
         y_list.push(normalizedNext);
       }
     }
@@ -187,22 +210,50 @@ class AI {
     const X = tf.tensor2d(X_list, [X_list.length, inputSize]);
     const y = tf.tensor2d(y_list, [y_list.length, 1]);
 
-    const model = tf.sequential();
-    
-    // input
-    model.add(tf.layers.dense({ units: 256, inputShape: [inputSize], activation: 'relu' }));
 
-    
+    const seqLen = TRAINING_PARAMS.data_range; // 150
+    const featCount = TRAINING_PARAMS.inputFeatures.length; // 5
+    const flatSize = seqLen * featCount; // 150 * 5 = 750
+
+    console.log("SEQ LEN:", seqLen);
+    console.log("FEATURE COUNT:", featCount);
+    console.log("TARGET SHAPE PRODUCT:", seqLen * featCount);
+
+    const model = tf.sequential();
+
+    // input
+    model.add(tf.layers.dense({ units: flatSize, inputShape: [flatSize], activation: 'relu' }));
+
+
     // hidden    
 
     if (TRAINING_PARAMS.dropout_percent > 0) {
       model.add(tf.layers.dropout({ rate: TRAINING_PARAMS.dropout_percent }));
-    } 
+    }
+
+    // model.add(tf.zeros)
+
+    // reshape to 3D for LSTM: [batchSize, seqLen, featCount]
+    // model.add(tf.layers.reshape({
+    //   targetShape: [seqLen, featCount] // [150, 5]
+    // }));
+
+    // // LSTM layer to capture temporal dependencies
+    // model.add(tf.layers.gru({
+    //   units: 32,
+    //   returnSequences: true,
+    //   activation: 'tanh',
+    //   recurrentActivation: 'sigmoid'
+    // }));
+    // // model.add(tf.layers.flatten());
+
+    // model.add(tf.layers.flatten()); // now total size = seqLen*64
 
 
-    for(let i = 0; i < TRAINING_PARAMS.layerDesign.length; i++) {
+    for (let i = 0; i < TRAINING_PARAMS.layerDesign.length; i++) {
       const layer = TRAINING_PARAMS.layerDesign[i];
-      model.add(tf.layers[layer[0]]({ units: layer[1], activation: layer[2] }));
+      const layerExtras = layer[3];
+      model.add(tf.layers[layer[0]]({ units: layer[1], activation: layer[2], ...layerExtras }));
     }
 
     // output
@@ -212,13 +263,23 @@ class AI {
     model.compile({
       optimizer: tf.train.adam(),
       loss: 'meanSquaredError',
-      metrics: ['mse'],
+      metrics: ['mse']
     });
+
 
     await model.fit(X, y, {
       epochs,
-      batchSize: 32,
-      shuffle: true
+      batchSize: 128, // could be 32, increases ram usage but faster
+      shuffle: TRAINING_PARAMS.shuffle, // shuffle the data
+      callbacks: {
+        onEpochEnd: async (epoch, logs) => {
+          const RAMUsage = process.memoryUsage().rss / 1024 / 1024; // MB
+          const RAMUsageGB = process.memoryUsage().rss / 1024 / 1024 / 1024; // GB
+          console.log(`RAM Usage: ${RAMUsage.toFixed(0)} MB (${RAMUsageGB.toFixed(2)} GB)`);
+        }
+      },
+      validationSplit: TRAINING_PARAMS.validation_split,
+      verbose: 1
     });
 
     await model.save('file://' + modelSavePath);
@@ -231,12 +292,13 @@ class AI {
 
     // normalize the input slice for prediction
     let slice = data.slice(-TRAINING_PARAMS.data_range);
-    // slice = appendExtraData(slice);
-    slice = appendTimeEncoding(slice);
+    slice = appendExtraData(slice);
     const normalizedSlice = normalizeSlice(slice);
     // const inputFlat = normalizedSlice.flatMap(c => [c.open, c.high, c.low, c.close]);
-    const featuresArray = TRAINING_PARAMS.inputFeatures.map(feature => normalizedSlice.map(c => c[feature]));
-    const inputFlat = featuresArray.flat();
+    // const featuresArray = TRAINING_PARAMS.inputFeatures.map(feature => normalizedSlice.map(c => c[feature]));
+    // const inputFlat = featuresArray.flat();
+
+    const inputFlat = formatCandles(normalizedSlice);
 
     if (!this.model) {
       console.log('Model not loaded');
@@ -244,13 +306,22 @@ class AI {
     }
 
     const inputTensor = tf.tensor2d([inputFlat], [1, TRAINING_PARAMS.data_range * TRAINING_PARAMS.inputFeatures.length]);
-    const predictedChange = this.model.predict(inputTensor).dataSync()[0];
 
-    // reconstruct absolute price
-    const lastClose = slice[slice.length - 1].close;
-    const predictedPrice = lastClose * (1 + predictedChange);
+    const allPredictions = [];
+    const sample_amount = TRAINING_PARAMS.sample_amount;
+    for(let i = 0; i < sample_amount; i++) {
+      const predictedChange = this.model.predict(inputTensor).dataSync()[0];
+        // reconstruct absolute price
+      const lastClose = slice[slice.length - 1].close;
+      const predictedPrice = lastClose * (1 + predictedChange);
+      allPredictions.push(predictedPrice);
+    }
 
-    return predictedPrice; // Already absolute price
+
+    const finalPredictedPrice = allPredictions.reduce((a, b) => a + b, 0) / sample_amount;
+  
+
+    return finalPredictedPrice; // Already absolute price
   }
 
   async predictNext(data, amount = 10) {
@@ -300,3 +371,4 @@ class AI {
 }
 
 export default AI;
+

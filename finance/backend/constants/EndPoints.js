@@ -227,7 +227,7 @@ class EndPoints {
         // middleware to check session unless public endpoint
         function checkSession(req, res, next) {
 
-            if (!EndPoints.list[req.path]) return next(); // allow normal pages through
+            return next(); // allow normal pages through
 
             const session = req.headers.session;
 
